@@ -100,6 +100,7 @@ Generate a realtion that contains ONLY tuples that appear in both of the input r
 
 ## PRODUCT 
 Generate a realtion that contains all possible combinations of tuples from the input realtions.
+
 **sintax**
 ( R x S )
 
