@@ -22,10 +22,10 @@ SQL is based on **bags** (duplicates) not **sets** (no duplicates).
 
 
 ## From Next Table
-![Table 1](../imges/table-01.png)
-![ENROLLED TABLE](../imges/table-02.png#right)
+![Table 1](../images/table-01.png)
+![ENROLLED TABLE](../images/table-02.png#right)
 
-![Course table](../imges/table-03.png#left)
+![Course table](../images/table-03.png#left)
 
 ## Basic Syntax 
 
@@ -41,7 +41,7 @@ WHERE age > 25
 SELECT  operation is equal to  **$\pi_{name, age}$ (Projection)**
 WHERE operation is equal to **$\sigma_{age> 25}$ (Selection)**
  **The Result will be** 
-![Resul-01](../imges/result_table-01.png)
+![Resul-01](../images/result_table-01.png)
 
 
 ## Basic Syntax :JOINS
@@ -83,7 +83,7 @@ SELECT AVG(gpa), COUNT(sid)
     FROM student WHERE login LIKE '%@cs'
 ```
  **The Result will be** 
-![Resul-02](../imges/result-02.png)
+![Resul-02](../imgaes/result-02.png)
 
 
 
@@ -97,7 +97,7 @@ SELECT COUNT(DISTINCT login)
     FROM student WHERE login Like '%@cs'
 ```
  **The Result will be** 
-![Resul-02](../imges/result-03.png)
+![Resul-02](../images/result-03.png)
 
 ## GROUP BY 
 
@@ -109,9 +109,9 @@ SELECT AVG(s.gpa), e.cid
  GROUP BY e.cid
 ```
 **we will make a join grouped by course id befor we claculate the avg** 
-![Resul-04](../imges/result-04.png)
+![Resul-04](../images/result-04.png)
 
-![resul-05](../imges/result-05.png)
+![resul-05](../images/result-05.png)
 
 
 > Non-aggregated values in SELECT output clause maust appear in GROUP BY clause.
@@ -132,7 +132,7 @@ SELECT AVG(s.gpa) AS avg_gpa, e.cid
 
 ## STRING OPERATIONS 
 
-![String operations](../imges/string-operations.png)
+![String operations](../images/string-operations.png)
 
 Standerd is that string matching are case **insensitve** and using only **single quates**
 
@@ -167,7 +167,7 @@ SELECT * FROM student AS s
 
 ```
 
-![concatination](../imges/concatinat.png)
+![concatination](../images/concatinat.png)
 
 
 **DATE/TIME OPERATIONS**
@@ -210,7 +210,7 @@ SELECT DISTINCT cid  FROM enrolled);
     ORDER BY grade;
     --  you can make it ORDER BY 1
     ```
-    ![result](../imges/result-06.png)
+    ![result](../images/result-06.png)
 
 
 - **LIMIT** <count*> [offset]
@@ -286,7 +286,7 @@ SELECT *, ROW_NUMBER() OVER() AS row_num
 
 ```
 **The ouput will be like**
-![resault](../imges/specialWindowFunction.png)
+![resault](../images/specialWindowFunction.png)
 
 The `OVER` keyword specifies how to group together typles when computing the window function.
 Use PARTITION BY yo specify group 
@@ -298,7 +298,7 @@ SELECT cid, sid,
  ORDER BY cid;
 
 ```
-![res](../imges/result-07.png)
+![res](../images/result-07.png)
 
 another example 
 *Find the student with the second highest grade for each course.*
