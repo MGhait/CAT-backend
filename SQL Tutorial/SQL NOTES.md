@@ -51,7 +51,7 @@ DROP TABLE student;
 > in POP SQL  program if we clik on any query it gets highlighted and we can run the hilghlghted query from the run botton 
 
 as shown down
-![example](exmapl-01.png)
+![example](images/exmapl-01.png)
 
 ## Modifay Table
 
@@ -125,7 +125,7 @@ INSERT INTO student(name, major) VALUES ('Anas','MTE');
 ```
 
 the output shown down
-![example2](exmapl-02.png)
+![example2](images/exmapl-02.png)
 
 ## UPDTAING AND DELETING
 
@@ -139,14 +139,14 @@ the output shown down
 UPDATE student SET major = 'PDE' 
   WHERE major = 'CME';
 ```
-![EXAMPLE3](exmapl-03.png)
+![EXAMPLE3](images/exmapl-03.png)
 
 
 
 
 ## advance example of database 
 **we will build this schema**
-![project map](DB_Schema.png)
+![project map](images/DB_Schema.png)
 
 ```sql
 
@@ -330,29 +330,29 @@ INSERT INTO works_with VALUES(105, 406, 130000);
 ```sql
     SELECT * FROM employee ; 
 ```
-![res-01](res-01.png)
+![res-01](images/res-01.png)
 
 ```sql
     SELECT * FROM client ; 
 ```
-![res-01](res-02.png)
+![res-01](images/res-02.png)
 
 ```sql
     SELECT * FROM works_with ; 
 ```
-![res-01](res-03.png)
+![res-01](images/res-03.png)
 
 ```sql
     SELECT * FROM branch_supplier ; 
 ```
-![res-01](res-04.png)
+![res-01](images/res-04.png)
 
 
 ```sql
 -- find all empoyees ordered by salary DESC
     SELECT * FROM employee  ORDER BY salary DESC; 
 ```
-![res-01](res-05.png)
+![res-01](images/res-05.png)
 
 
 ## SOME SQL FUNCTION 
@@ -363,7 +363,7 @@ INSERT INTO works_with VALUES(105, 406, 130000);
 SELECT COUNT(SEX) AS NUMER , SEX FROM EMPLOYEE GROUP BY SEX;
 
 ```
-![res-01](res-06.png)
+![res-01](images/res-06.png)
 
 ```SQL 
     -- FIND THE TOTAL SALES OF EACH SALESMAN
@@ -371,7 +371,7 @@ SELECT COUNT(SEX) AS NUMER , SEX FROM EMPLOYEE GROUP BY SEX;
 SELECT COUNT(SEX) AS NUMER , SEX FROM EMPLOYEE GROUP BY SEX;
 
 ```
-![res-01](res-07.png)
+![res-01](images/res-07.png)
 
 ```SQL 
     -- FIND EVERY EMPLOYEE WHOSE BIRTHDAY IN Feb
@@ -382,7 +382,7 @@ SELECT EMP_ID,
             WHERE birth_day LIKE '____-02%';
 
 ```
-![res-01](res-08.png)
+![res-01](images/res-08.png)
 
 ## UNION 
 ```SQL
@@ -404,7 +404,7 @@ UNION
 SELECT total_sales FROM works_with;
 
 ```
-![res](res-09.png)
+![res](images/res-09.png)
 
 ## JOINS 
 ```sql 
@@ -443,7 +443,7 @@ INSERT INTO branch VALUES(4, 'Buffalo', NULL, NULL );
     */
 ```
 
-![resualt](res-10.png)
+![resualt](images/res-10.png)
 
 ```sql
 /*
@@ -463,7 +463,7 @@ SELECT employee.emp_id, employee.first_name, branch.branch_name
 FROM employee  LEFT JOIN branch ON  employee.emp_id= branch.mgr_id;
 
 ```
-![RES](res-11.png)
+![RES](images/res-11.png)
 
 ```SQL
     /*
@@ -477,7 +477,7 @@ FROM employee  RIGHT JOIN branch ON  employee.emp_id= branch.mgr_id;
 
 ```
 
-![RES](res-12.png)
+![RES](images/res-12.png)
 
 > there is no need for full join  🤷
 ## nasted Queries
@@ -493,7 +493,7 @@ FROM employee e WHERE e.emp_id IN (
 
 
 ```
-![RES](res-13.png)
+![RES](images/res-13.png)
 
 ```sql
     /*
@@ -511,7 +511,7 @@ WHERE c.branch_id IN (
 );
 
 ```
-![RES](res-14.png)
+![RES](images/res-14.png)
 ## ON DELETE
 
 - SET NULL
@@ -552,8 +552,8 @@ WHERE c.branch_id IN (
     SELECT * FROM branch;
     SELECT * FROM employee;
     ```
-    ![branch](branch_table.png)
-    ![employee](employee_table.png)
+    ![branch](images/branch_table.png)
+    ![employee](images/employee_table.png)
 - CASCAD
     ```sql
     /*
@@ -578,7 +578,7 @@ WHERE c.branch_id IN (
     -- there is no longer branch id =2 in the branch_supplier table
     ```
 
-    ![tabel](branch_supplier_table.png)
+    ![tabel](images/branch_supplier_table.png)
 
 ## triggers
 **trigger** is a statement that the system executes automatically as a side effect of a modification to the database 
@@ -669,7 +669,7 @@ DELIMITER ;
 
 ```
 
-![res](trigger.png)
+![res](images/trigger.png)
 
 
 > we can save our log into that trigger 
@@ -687,7 +687,7 @@ DELIMITER ;
 
 > we have here Student is an Entity and student_id is a primary key, gpe is an attribute, name is a composite attribute, clubs is a multi-valued attribute, and has_ honors is a derived attribute it can be derived from gpa ..
 
-![ER-Digram](digram.png)
+![ER-Digram](images/digram.png)
 ****
 **Multiple Entites** 
 You can define more than one entity in the diagram 
@@ -714,12 +714,4 @@ A relationship that serves to uniquly identify the weak entity
 
 
 
-
-
-## IF AND CASE STATMENT
-
-CASE STATEMENT 
-```SQL
-
-```
 
