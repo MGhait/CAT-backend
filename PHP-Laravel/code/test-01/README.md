@@ -33,3 +33,8 @@ foreach ($posts as $post){
     echo "<li>". $post['NAME'] ."</li>";
 } 
 ```
+## creating a class for connection 
+``` php
+
+
+```
