@@ -128,3 +128,104 @@ foreach ($posts as $post){
     echo "<li>". $post['NAME'] ."</li>";
 } 
 ``` 
+## index.php file 
+```php
+
+
+```
+## updating router.php file
+```php
+<?php
+//we use pars_url() to get url separated form any possible queries
+$uri = parse_url($_SERVER['REQUEST_URI'])['path'];  // this give as path 'url only'
+
+//adding note and notes controllers
+$routes = [
+'/' => 'controllers/index.php',
+'/about' => 'controllers/about.php',
+'/notes' => 'controllers/notes.php',
+'/note' => 'controllers/note.php',
+'/contact' => 'controllers/contact.php'
+];
+
+function abort($code=404){
+http_response_code($code);
+//require "views/{$code}.php";
+require "views/404.php";
+die();
+}
+```
+> adding notes and not controllers and views
+
+## note controller 
+```php
+<?php
+
+$config = require ('config.php');
+$db = new Database($config['database']);
+
+$heading = 'Note';
+
+$note = $db -> query("SELECT * FROM notes WHERE user_id = :id",['id'=>$_GET["id"]])->fetch(PDO::FETCH_ASSOC);
+//dd($note);
+require "views/note.view.php";
+
+```
+
+## notes controller
+
+```php
+<?php
+
+$config = require ('config.php');
+$db = new Database($config['database']);
+
+$heading = 'My Notes';
+
+$notes = $db -> query("SELECT * FROM notes WHERE user_id = 1")->fetchAll(PDO::FETCH_ASSOC);
+
+require "views/notes.view.php";
+```
+
+
+## notes.view
+
+```php
+<?php require ('partials/head.php');?>
+<?php require ('partials/nav.php');?>
+<?php require ('partials/banner.php')?>
+<main>
+    <div class="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
+        <?php foreach ($notes as $note) : ?>
+        <li>
+           <a href="/note?id=<?= $note['id']?>" class="text-blue-500 hover:underline">
+               <?= $note['body']?>
+           </a>
+        </li>
+        <?php endforeach; ?>
+    </div>
+</main>
+<?php require ('partials/footer.php')?>
+
+```
+
+## note.view
+
+```php
+<?php require ('partials/head.php');?>
+<?php require ('partials/nav.php');?>
+<?php require ('partials/banner.php')?>
+<main>
+    <div class="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
+        <p class="mb-6">
+            <a href="/notes" class="text-blue-500 underline ">
+                go back ..
+            </a>
+        </p>
+        <p>
+            <?= $note["body"] ?>
+        </p>
+    </div>
+</main>
+<?php require ('partials/footer.php')?>
+```

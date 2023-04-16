@@ -1,17 +1,14 @@
 <?php
 
 require 'function.php';
-// require 'router.php';
 require 'Database.php';
+require 'router.php';
 
-$config = require ('config.php');
-$db = new Database($config['database']);
 
-$id = $_GET['id'];
 
-$query = "SELECT * FROM posts where id = ?";
-$posts = $db->query($query,[$id])-> fetchAll();
+//$id = $_GET['id'];
+////dd($_GET);
+//
+//$query = "SELECT * FROM users where id = :id";
+//$posts = $db->query($query,['id' => $id])-> fetch();
 
-foreach ($posts as $post){
-    echo "<li>". $post['NAME'] ."</li>";
-} 
