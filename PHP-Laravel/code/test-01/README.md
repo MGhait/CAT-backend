@@ -130,7 +130,12 @@ foreach ($posts as $post){
 ``` 
 ## index.php file 
 ```php
+<?php
 
+require 'function.php';
+require 'Database.php';
+ require 'router.php';
+ 
 
 ```
 ## updating router.php file
@@ -228,4 +233,77 @@ require "views/notes.view.php";
     </div>
 </main>
 <?php require ('partials/footer.php')?>
+```
+> note that the output of `$note` variable is bool if there's no something
+> from database it will return false so, 
+> we have to make statement to avoid that by updating note.php
+
+## note.php
+```php
+<?php
+
+$config = require ('config.php');
+$db = new Database($config['database']);
+
+$heading = 'Note';
+
+//to be sure that the user have this note
+
+//$note = $db -> query("SELECT * FROM notes WHERE user_id = :user and id = :id",[
+//    'user'=> 1,
+//    'id'=>$_GET["id"]
+//])->fetch(PDO::FETCH_ASSOC);
+$note = $db -> query("SELECT * FROM notes WHERE id = :id",[
+    'id'=>$_GET["id"]
+])->fetch(PDO::FETCH_ASSOC);
+//dd($note);
+
+if (! $note) {
+    abort();
+}
+
+if ($note['user_id'] != 1)
+{
+    abort(403);
+}
+require "views/note.view.php";
+
+```
+
+> creating a new response class to make our response
+> more readable and updating my note controller
+
+```php
+<?php
+
+$config = require ('config.php');
+$db = new Database($config['database']);
+
+$heading = 'Note';
+
+$note = $db -> query("SELECT * FROM notes WHERE id = :id",[
+    'id'=>$_GET["id"]
+])->fetch(PDO::FETCH_ASSOC);
+//dd($note['user_id']);
+
+if (! $note) {
+    abort();
+}
+$currentUserId = 1;
+if ($note['user_id'] != $currentUserId)
+{
+    abort(Response::FORBIDDEN);
+}
+require "views/note.view.php";
+
+```
+```php
+<?php
+
+class  Response {
+    const NOT_FOUND = 404;
+    const  FORBIDDEN = 403;
+
+}
+
 ```
