@@ -307,3 +307,109 @@ class  Response {
 }
 
 ```
+
+> adding function authorize in function.php and replacing
+> the fitch and fitchAll function with get and find in database calss
+ 
+## Database.php
+```php
+<?php
+class Database {
+
+    public $connection;
+    public $statement;
+
+    public function __construct($config,$username = 'root',$password = 'Password')
+    {
+        $dsn ='mysql:' .http_build_query( $config,'',';');
+        $this->connection= new PDO($dsn,$username,$password,[
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+        ]);
+    }
+
+//    public function query($query, $params = [])
+//    {
+//        $statement = $this->connection->prepare($query);
+//        $statement->execute($params);
+//        return $statement ;
+//    }
+    public function query($query, $params = [])
+    {
+        $this->statement = $this->connection->prepare($query);
+        $this->statement->execute($params);
+        return $this ;
+    }
+
+    public function get()
+    {
+        return $this->statement-> fetchAll();
+    }
+
+    public function find()
+    {
+        return $this->statement->fetch();
+    }
+
+    public function findOrFail()
+    {
+        $res = $this->find();
+        if (! $res)
+        {
+            abort();
+        }
+        return $res;
+    }
+
+}
+```
+
+## note.php
+```php
+<?php
+$config = require ('config.php');
+$db = new Database($config['database']);
+
+$heading = 'Note';
+$currentUserId = 1;
+
+$note = $db -> query("SELECT * FROM notes WHERE id = :id",[
+    'id'=>$_GET["id"]
+])->findOrFail();
+//dd($note);
+
+//if ($note['user_id'] != $currentUserId)
+//{
+//    abort(Response::FORBIDDEN);
+//}
+
+authorize($note['user_id'] ==$currentUserId);
+require "views/note.view.php";
+
+```
+## function.php
+```php
+<?php
+//dump and die function -to check any point of our code-
+function dd($value)
+{
+echo '<pre>';
+    var_dump($value);
+    echo '</pre>';
+die();
+}
+// to get the boolean value of the current page
+// we use it to make short-hand-if more readable
+function urlIs($value){
+return $_SERVER['REQUEST_URI'] == $value;
+}
+
+//short hand if
+//=$_SERVER['REQUEST_URI'] =='/'?"bg-gray-900 text-white":"text-gray-300"
+
+function authorize($condition, $status = Response::FORBIDDEN)
+{
+    if (! $condition) {
+        abort($status);
+    }
+}
+```
