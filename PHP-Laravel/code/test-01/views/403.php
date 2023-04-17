@@ -14,4 +14,4 @@
         </p>
     </div>
 </main>
-<?php require ('partials/footer.php') ?>
+<?php require('views/partials/footer.php') ?>

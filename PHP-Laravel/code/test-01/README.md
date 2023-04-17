@@ -148,8 +148,8 @@ $uri = parse_url($_SERVER['REQUEST_URI'])['path'];  // this give as path 'url on
 $routes = [
 '/' => 'controllers/index.php',
 '/about' => 'controllers/about.php',
-'/notes' => 'controllers/notes.php',
-'/note' => 'controllers/note.php',
+'/notes' => 'controllers/index.php',
+'/note' => 'controllers/show.php',
 '/contact' => 'controllers/contact.php'
 ];
 
@@ -173,7 +173,7 @@ $heading = 'Note';
 
 $note = $db -> query("SELECT * FROM notes WHERE user_id = :id",['id'=>$_GET["id"]])->fetch(PDO::FETCH_ASSOC);
 //dd($note);
-require "views/note.view.php";
+require "views/show.view.php";
 
 ```
 
@@ -189,7 +189,7 @@ $heading = 'My Notes';
 
 $notes = $db -> query("SELECT * FROM notes WHERE user_id = 1")->fetchAll(PDO::FETCH_ASSOC);
 
-require "views/notes.view.php";
+require "views/index.view.php";
 ```
 
 
@@ -266,7 +266,7 @@ if ($note['user_id'] != 1)
 {
     abort(403);
 }
-require "views/note.view.php";
+require "views/show.view.php";
 
 ```
 
@@ -294,7 +294,7 @@ if ($note['user_id'] != $currentUserId)
 {
     abort(Response::FORBIDDEN);
 }
-require "views/note.view.php";
+require "views/show.view.php";
 
 ```
 ```php
@@ -383,7 +383,7 @@ $note = $db -> query("SELECT * FROM notes WHERE id = :id",[
 //}
 
 authorize($note['user_id'] ==$currentUserId);
-require "views/note.view.php";
+require "views/show.view.php";
 
 ```
 ## function.php
@@ -412,4 +412,200 @@ function authorize($condition, $status = Response::FORBIDDEN)
         abort($status);
     }
 }
+```
+> we created a validator class to validate the note before 
+> it goes to database, updated routes.php by making notes-note-note_create into note dir
+> and rename it to index-show-create also update the
+> bath of or files
+
+## validator.php 
+
+```php
+<?php
+
+class  Validator
+{
+    public static function string($value, $min =1 ,$max= INF)
+    {
+        $value = trim($value);
+        if (strlen($value) >= $min && strlen($value) <= $max)
+        {
+            return strlen($value);
+        }
+
+    }
+}
+
+```
+## notes/index.view.php
+```php
+<?php require ('views/partials/head.php')?>
+<?php require ('views/partials/nav.php');?>
+<?php require ('views/partials/banner.php')?>
+<main>
+    <div class="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
+        <ul>
+            <?php foreach ($notes as $note) : ?>
+                <li>
+                    <a href="/note?id=<?= $note['id']?>" class="text-blue-500 hover:underline">
+                        <?= htmlspecialchars($note['body'])?>
+                    </a>
+                </li>
+            <?php endforeach; ?>
+
+            <p class="mt-10">
+                <a href="/note/create" class="text-blue-600 hover:underline">
+                    Create Note
+                </a>
+            </p>
+        </ul>
+    </div>
+</main>
+<?php require('views/partials/footer.php') ?>
+```
+## notes/create.view.php
+```php
+<?php require ('views/partials/head.php')?>
+<?php require ('views/partials/nav.php');?>
+<?php require ('views/partials/banner.php')?>
+<main>
+    <div class="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
+
+<!--        <form method="post">-->
+<!--            <label for="body">Description</label>-->
+<!--            <div>-->
+<!--                <textarea id="body" name="body"></textarea>-->
+<!--            </div>-->
+<!---->
+<!--            <p class="mt-10">-->
+<!--                <button type="submit">-->
+<!--                    Create-->
+<!--                </button>-->
+<!--            </p>-->
+<!--        </form>-->
+
+
+
+
+
+<!--        0000000000000000000000000000000000000000000000000000000000000000000000000000000000000       -->
+       <div class="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
+           <div>
+               <div class="md:grid md:grid-cols-3 md:gap-6">
+                   <div class="mt-5 md:col-span-2 md:mt-0">
+                       <form action="#" method="post">
+                           <div class="space-y-12">
+                               <div class="border-b border-gray-900/10 pb-12">
+                                   <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+                                       <div class="col-span-full">
+                                           <label for="about" class="block text-sm font-medium leading-6 text-gray-900">Description</label>
+                                           <div class="mt-2">
+                                               <textarea
+                                                   id="body"
+                                                   name="body"
+                                                   rows="3"
+                                                   class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                                                   placeholder="Here's an idea for a note.."
+
+                                               ><?= isset($_POST['body'])? $_POST['body'] : ''?></textarea>
+                                               <?php if(isset($errors['body'])) : ?>
+                                                <p class="text-red-500 text-xs mt-2">
+                                                    <?= $errors['body']?>
+                                                </p>
+                                               <?php endif; ?>
+                                           </div>
+                                       </div>
+                                   </div>
+                               </div>
+                           </div>
+                           <div class="mt-6 flex items-center justify-end gap-x-6">
+                               <button type="button" class="text-sm font-semibold leading-6 text-gray-900">Cancel</button>
+                               <button type="submit" class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Save</button>
+                           </div>
+                       </form>
+
+
+                   </div>
+               </div>
+           </div>
+       </div>
+    </div>
+</main>
+<?php require('views/partials/footer.php') ?>
+```
+## notes/show.view.php
+```php
+<?php require ('views/partials/head.php')?>
+<?php require ('views/partials/nav.php');?>
+<?php require ('views/partials/banner.php')?>
+<main>
+    <div class="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
+        <p class="mb-6">
+            <a href="/notes" class="text-blue-500 underline ">
+                go back ..
+            </a>
+        </p>
+        <p>
+            <?= htmlspecialchars($note["body"]) ?>
+        </p>
+    </div>
+</main>
+<?php require('views/partials/footer.php') ?>
+```
+## controllers/notes/index.php
+```php
+<?php
+$config = require ('config.php');
+$db = new Database($config['database']);
+
+$heading = 'My Notes';
+
+$notes = $db -> query("SELECT * FROM notes WHERE user_id = 1")->get();
+
+require "views/notes/index.view.php";
+
+```
+## controllers/notes/show.php
+```php
+<?php
+$config = require ('config.php');
+$db = new Database($config['database']);
+
+$heading = 'Note';
+$currentUserId = 1;
+
+$note = $db -> query("SELECT * FROM notes WHERE id = :id",[
+    'id'=>$_GET["id"]
+])->findOrFail();
+
+authorize($note['user_id'] ==$currentUserId);
+require "views/notes/show.view.php";
+
+```
+## controllers/notes/create.php
+```php
+<?php
+require 'Validator.php';
+
+$config = require ('config.php');
+$db = new Database($config['database']);
+$heading = 'Create Note';
+
+if($_SERVER['REQUEST_METHOD']== 'POST')
+{
+    $errors =[];
+    $invalidNum =150;
+
+    if(! Validator::string($_POST['body'],1,300)){
+        $errors['body']="A Note Can NOT Be Empty Or More Than {$invalidNum} Characters. ";
+    }
+
+    if(empty($errors)){
+        $db->query('INSERT INTO notes(body, user_id) VALUE(:body, :user_id)',[
+            'body'=> $_POST['body'],
+            'user_id'=> 1
+        ]);
+    }
+}
+require 'views/notes/create.view.php';
 ```
