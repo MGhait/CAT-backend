@@ -609,3 +609,230 @@ if($_SERVER['REQUEST_METHOD']== 'POST')
 }
 require 'views/notes/create.view.php';
 ```
+> using name spacing in our project
+
+## Database.php
+```php
+<?php
+namespace core;
+use PDO;
+class Database {
+
+    public $connection;
+    public $statement;
+
+    public function __construct($config,$username = 'root',$password = 'Password')
+    {
+        $dsn ='mysql:' .http_build_query( $config,'',';');
+        $this->connection= new PDO($dsn,$username,$password,[
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+        ]);
+    }
+
+    public function query($query, $params = [])
+    {
+        $this->statement = $this->connection->prepare($query);
+        $this->statement->execute($params);
+        return $this ;
+    }
+
+    public function get()
+    {
+        return $this->statement-> fetchAll();
+    }
+
+    public function find()
+    {
+        return $this->statement->fetch();
+    }
+
+    public function findOrFail()
+    {
+        $res = $this->find();
+        if (! $res)
+        {
+            abort();
+        }
+        return $res;
+    }
+
+}
+```
+## function.php
+```php
+<?php
+
+use core\Response;
+
+function dd($value)
+{
+echo '<pre>';
+    var_dump($value);
+    echo '</pre>';
+die();
+}
+
+function urlIs($value){
+return $_SERVER['REQUEST_URI'] == $value;
+}
+function authorize($condition, $status = Response::FORBIDDEN)
+{
+    if (! $condition) {
+        abort($status);
+    }
+}
+
+function base_bath($path)
+{
+    return BASE_PATH . $path;
+}
+function view($path, $attributes = [])
+{
+    extract($attributes);
+    require base_bath('views/'.$path);
+}
+```
+## response.php
+```php
+<?php
+namespace core;
+class  Response {
+    const NOT_FOUND = 404;
+    const  FORBIDDEN = 403;
+
+}
+
+```
+
+## router.php
+```php
+<?php
+$routes = require base_bath('routes.php');
+
+function abort($code=404){
+    http_response_code($code);
+    require base_bath("views/{$code}.php");
+    die();
+}
+function routeToController($uri,$routes){
+    if (array_key_exists($uri,$routes)){
+        require base_bath($routes[$uri]);
+    }
+    else {
+        abort();
+    }
+}
+
+$uri = parse_url($_SERVER['REQUEST_URI'])['path'];
+routeToController($uri,$routes);
+
+```
+
+## Validator.php
+```php
+<?php
+namespace core;
+class  Validator
+{
+    public static function string($value, $min =1 ,$max= INF)
+    {
+        $value = trim($value);
+        if (strlen($value) >= $min && strlen($value) <= $max)
+        {
+            return strlen($value);
+        }
+
+    }
+}
+
+```
+
+
+## public/index.php
+```php
+<?php
+
+const BASE_PATH = __DIR__ . '/../';
+require BASE_PATH . 'core/function.php';
+
+
+
+spl_autoload_register(function ($class) {
+    $class= str_replace('\\',DIRECTORY_SEPARATOR,$class);
+   require base_bath("{$class}.php");
+});
+require base_bath('core/router.php');
+
+```
+
+
+## controllers/notes/create.php
+```php
+<?php
+use core\Database;
+use core\Validator;
+
+require base_bath('core/Validator.php');
+
+$config = require base_bath('config.php');
+$db = new Database($config['database']);
+$errors =[];
+if($_SERVER['REQUEST_METHOD']== 'POST')
+{
+
+    $invalidNum =150;
+
+    if(! Validator::string($_POST['body'],1,300)){
+        $errors['body']="A Note Can NOT Be Empty Or More Than {$invalidNum} Characters. ";
+    }
+
+    if(empty($errors)){
+        $db->query('INSERT INTO notes(body, user_id) VALUE(:body, :user_id)',[
+            'body'=> $_POST['body'],
+            'user_id'=> 1
+        ]);
+    }
+}
+view("notes/create.view.php" ,[
+    'heading'=> 'Create Note',
+    'errors'=>$errors
+]);
+```
+## controllers/notes/index.php
+```php
+<?php
+use core\Database;
+$config = require base_bath('config.php');
+$db = new Database($config['database']);
+
+$notes = $db -> query("SELECT * FROM notes WHERE user_id = 1")->get();
+
+view("notes/index.view.php" ,[
+    'heading'=> 'My Notes',
+    'notes'=>$notes
+]);
+
+
+```
+## controllers/notes/show.php
+```php
+<?php
+use core\Database;
+
+$config = require base_bath('config.php');
+$db = new Database($config['database']);
+
+$currentUserId = 1;
+
+$note = $db -> query("SELECT * FROM notes WHERE id = :id",[
+    'id'=>$_GET["id"]
+])->findOrFail();
+
+authorize($note['user_id'] ==$currentUserId);
+
+view("notes/show.view.php" ,[
+    'heading'=> 'Note',
+    'note'=>$note
+]);
+
+```

@@ -1,4 +1,7 @@
 <?php
+
+use core\Response;
+
 function dd($value)
 {
 echo '<pre>';
@@ -15,4 +18,14 @@ function authorize($condition, $status = Response::FORBIDDEN)
     if (! $condition) {
         abort($status);
     }
+}
+
+function base_bath($path)
+{
+    return BASE_PATH . $path;
+}
+function view($path, $attributes = [])
+{
+    extract($attributes);
+    require base_bath('views/'.$path);
 }
