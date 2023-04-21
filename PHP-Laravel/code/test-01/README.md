@@ -1320,3 +1320,197 @@ if($_SERVER['REQUEST_METHOD']== 'POST')
         die();
 }
 ```
+
+> adding edit option to finish our CRUD project here is the last update of files and 
+> new files created edit.php - update.php and update in some views
+
+
+## notes/edit.php
+```php
+<?php
+use core\Database;
+use core\App;
+$db = App::resolve(Database::class);
+
+$currentUserId = 1 ;
+$note = $db->query("SELECT * FROM notes WHERE id = :id", [
+    'id' => $_GET["id"]
+])->findOrFail();
+
+authorize($note['user_id'] == $currentUserId);
+view("notes/edit.view.php" ,[
+    'heading'=> 'Create Note',
+    'errors'=> [],
+    'note'=>$note
+]);
+```
+
+## notes/update.php
+```php
+
+<?php
+
+// find the corresponding note
+
+use core\Database;
+use core\App;
+use core\Validator;
+
+$db = App::resolve(Database::class);
+
+$currentUserId = 1 ;
+$note = $db->query("SELECT * FROM notes WHERE id = :id", [
+    'id' => $_POST["id"]
+])->findOrFail();
+
+// authorize that the current user can dit the note
+authorize($note['user_id'] == $currentUserId);
+
+// validate the form
+$errors= [];
+$invalidNum =250;
+if(! Validator::string($_POST['body'],1,$invalidNum)){
+    $errors['body']="A Note Can NOT Be Empty Or More Than {$invalidNum} Characters. ";
+}
+
+// if no validation errors, update the record in the notes database table.
+if (count($errors)) {
+    return view('notes/edit.view.php',[
+       'heading'=> 'Edit Note',
+       'errors' => $errors,
+       'note' => $note
+    ]);
+}
+
+$db->query('update notes set body = :body where  id = :id',[
+    'id' => $_POST['id'],
+    'body' => $_POST['body']
+]);
+
+// redirect the user
+
+header('location: /notes');
+die();
+
+```
+
+## views/notes/edit.view.php
+```php
+
+<?php require base_bath('views/partials/head.php')?>
+<?php require base_bath('views/partials/nav.php');?>
+<?php require base_bath('views/partials/banner.php')?>
+<main>
+    <div class="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
+
+       <div class="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
+           <div>
+               <div class="md:grid md:grid-cols-3 md:gap-6">
+                   <div class="mt-5 md:col-span-2 md:mt-0">
+                       <form method="POST" action="/note">
+                           <input type="hidden" name="_method" value="PATCH">
+                           <input type="hidden" name="id" value="<?= $note['id'] ?>">
+                           <div class="space-y-12">
+                               <div class="border-b border-gray-900/10 pb-12">
+                                   <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+                                       <div class="col-span-full">
+                                           <label for="about" class="block text-sm font-medium leading-6 text-gray-900">Description</label>
+                                           <div class="mt-2">
+                                               <textarea
+                                                   id="body"
+                                                   name="body"
+                                                   rows="3"
+                                                   class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                                                   placeholder="Here's an idea for a note.."
+
+                                               ><?=  $note['body'] ?></textarea>
+                                               <?php if(isset($errors['body'])) : ?>
+                                                <p class="text-red-500 text-xs mt-2">
+                                                    <?= $errors['body']?>
+                                                </p>
+                                               <?php endif; ?>
+                                           </div>
+                                       </div>
+                                   </div>
+                               </div>
+                           </div>
+                           <div class="mt-6 flex items-center justify-end gap-x-6 gap-x-4 justify-end">
+
+                               <a
+                                       href="/notes"
+                                       class="rounded-md bg-gray-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                               >
+                                   Cancel
+                               </a>
+                               <button
+                                       type="submit"
+                                       class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                               >
+                                   Update
+                               </button>
+                           </div>
+                       </form>
+
+
+                   </div>
+               </div>
+           </div>
+       </div>
+    </div>
+</main>
+<?php require base_bath('views/partials/footer.php') ?>
+
+
+```
+
+## views/notes/show.view.php
+```php
+<?php require base_bath('views/partials/head.php')?>
+<?php require base_bath('views/partials/nav.php');?>
+<?php require base_bath('views/partials/banner.php')?>
+<main>
+    <div class="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
+        <p class="mb-6">
+            <a href="/notes" class="text-blue-500 underline ">
+                go back ..
+            </a>
+        </p>
+        <p class="w-full md:w-auto">
+            <?= htmlspecialchars($note["body"]) ?>
+        </p>
+
+        <footer class="mt-6">
+
+            <a href="/note/edit?id=<?= $note['id'] ?>"
+               class="rounded-md bg-gray-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+            >
+                Edit
+            </a>
+
+        </footer>
+
+
+    </div>
+</main>
+<?php require base_bath('views/partials/footer.php') ?>
+```
+
+## last update for routes.php file
+```php
+<?php
+
+$router->get('/', 'controllers/index.php');
+$router->get('/about','controllers/about.php');
+$router->get('/contact','controllers/contact.php');
+
+$router->get('/notes','controllers/notes/index.php');
+$router->get('/note','controllers/notes/show.php');
+$router->delete('/note','controllers/notes/destroy.php');
+
+$router->get('/note/edit','controllers/notes/edit.php');
+$router->patch('/note','controllers/notes/update.php');
+
+$router->get('/note/create','controllers/notes/create.php');
+$router->post('/notes','controllers/notes/store.php');
+
+```
