@@ -97,7 +97,7 @@ class Database {
 <?php
 
 require 'function.php';
-// require 'router.php';
+// require 'Router.php';
 require 'Database.php';
 
 $config = require ('config.php');
@@ -134,7 +134,7 @@ foreach ($posts as $post){
 
 require 'function.php';
 require 'Database.php';
- require 'router.php';
+ require 'Router.php';
  
 
 ```
@@ -761,7 +761,7 @@ spl_autoload_register(function ($class) {
     $class= str_replace('\\',DIRECTORY_SEPARATOR,$class);
    require base_bath("{$class}.php");
 });
-require base_bath('core/router.php');
+require base_bath('core/Router.php');
 
 ```
 
@@ -834,5 +834,288 @@ view("notes/show.view.php" ,[
     'heading'=> 'Note',
     'note'=>$note
 ]);
+
+```
+> edit our routes and change router and edite crate note and adding destroy and store 
+> here is code changes for all files and new ones
+ 
+## notes/create.php
+```php
+<?php
+// commented files usually are deleted
+//use core\Database;
+//use core\Validator;
+
+//require base_bath('core/Validator.php');
+
+//$config = require base_bath('config.php');
+//$db = new Database($config['database']);
+//$errors =[];
+//if($_SERVER['REQUEST_METHOD']== 'POST')
+//{
+//
+//    $invalidNum =150;
+//
+//    if(! Validator::string($_POST['body'],1,300)){
+//        $errors['body']="A Note Can NOT Be Empty Or More Than {$invalidNum} Characters. ";
+//    }
+//
+//    if(empty($errors)){
+//        $db->query('INSERT INTO notes(body, user_id) VALUE(:body, :user_id)',[
+//            'body'=> $_POST['body'],
+//            'user_id'=> 1
+//        ]);
+//    }
+//}
+view("notes/create.view.php" ,[
+    'heading'=> 'Create Note',
+    'errors'=> []
+]);
+```
+
+## notes/destroy.php
+```php
+<?php
+use core\Database;
+
+$config = require base_bath('config.php');
+$db = new Database($config['database']);
+
+$currentUserId = 1 ;
+
+$note = $db->query("SELECT * FROM notes WHERE id = :id", [
+    'id' => $_POST["id"]
+])->findOrFail();
+
+authorize($note['user_id'] == $currentUserId);
+
+$db->query('DELETE FROM notes WHERE id = :id',[
+'id'=>$_GET['id'],
+]);
+
+header('location: /notes');
+exit();
+
+
+```
+
+## notes/show.php
+```php
+<?php
+use core\Database;
+
+$config = require base_bath('config.php');
+$db = new Database($config['database']);
+
+$currentUserId = 1 ;
+//dd($_POST);
+//dd($_SERVER['REQUEST_METHOD']);
+//if($_SERVER['REQUEST_METHOD'] == 'POST') {
+//    $note = $db->query("SELECT * FROM notes WHERE id = :id", [
+//        'id' => $_GET["id"]
+//    ])->findOrFail();
+//
+//    authorize($note['user_id'] == $currentUserId);
+//
+//    $db->query('DELETE FROM notes WHERE id = :id',[
+//    'id'=>$_GET['id'],
+//    ]);
+//
+//    header('location: /notes');
+//    exit();
+//
+//
+//}else{
+//    $note = $db->query("SELECT * FROM notes WHERE id = :id", [
+//        'id' => $_GET["id"]
+//    ])->findOrFail();
+//
+//    authorize($note['user_id'] == $currentUserId);
+//
+//    view("notes/show.view.php", [
+//        'heading' => 'Note',
+//        'note' => $note
+//    ]);
+//}
+
+
+$note = $db->query("SELECT * FROM notes WHERE id = :id", [
+    'id' => $_GET["id"]
+])->findOrFail();
+
+authorize($note['user_id'] == $currentUserId);
+
+view("notes/show.view.php", [
+    'heading' => 'Note',
+    'note' => $note
+]);
+
+```
+## notes/store.php
+
+>this file to store our note into DB
+
+```php
+<?php
+use core\Database;
+use core\Validator;
+
+$config = require base_bath('config.php');
+$db = new Database($config['database']);
+
+$errors= [];
+
+if($_SERVER['REQUEST_METHOD']== 'POST')
+{
+    $invalidNum =250;
+    if(! Validator::string($_POST['body'],1,$invalidNum)){
+        $errors['body']="A Note Can NOT Be Empty Or More Than {$invalidNum} Characters. ";
+    }
+    if (! empty($errors)) {
+        // validation issues
+         return view("notes/create.view.php" ,[
+            'heading'=> 'Create Note',
+            'errors'=>$errors
+        ]);
+    }
+        $db->query('INSERT INTO notes(body, user_id) VALUE(:body, :user_id)',[
+            'body'=> $_POST['body'],
+            'user_id'=> 1
+        ]);
+        header('location: /notes');
+        die();
+}
+```
+
+## routes.php
+```php
+<?php
+
+//return  [
+//    '/' => 'controllers/index.php',
+
+//    '/about' => 'controllers/about.php',
+
+//    '/notes' => 'controllers/notes/index.php',
+
+//    '/note' => 'controllers/notes/show.php',
+
+//    '/note/create' => 'controllers/notes/create.php',
+
+//    '/contact' => 'controllers/contact.php',
+//];
+
+
+$router->get('/', 'controllers/index.php');
+$router->get('/about','controllers/about.php');
+$router->get('/contact','controllers/contact.php');
+
+$router->get('/notes','controllers/notes/index.php');
+$router->get('/note','controllers/notes/show.php');
+$router->delete('/note','controllers/notes/destroy.php');
+
+$router->get('/note/create','controllers/notes/create.php');
+$router->post('/notes','controllers/notes/store.php');
+
+```
+
+## Router.php class (:router.php file)
+```php
+<?php
+
+namespace core;
+
+class  Router {
+    protected $routes = [];
+
+    public function add($method, $uri,$controller) {
+        $this->routes[]= [
+            'uri'=> $uri,
+            'controller' =>$controller,
+            'method' => $method
+        ];
+    }
+
+    public function get($uri,$controller){
+        $this->add('GET', $uri, $controller);
+    }
+
+    public function post($uri,$controller){
+        $this->add('POST', $uri, $controller);
+    }
+
+    public function delete($uri,$controller){
+        $this->add('DELETE', $uri, $controller);
+    }
+
+    public function patch($uri,$controller){
+        $this->add('BATCH', $uri, $controller);
+    }
+
+    public function put($uri,$controller){
+        $this->add('PUT', $uri, $controller);
+    }
+    public function route($uri,$method){
+        foreach ($this->routes as $route) {
+            if ($route['uri'] == $uri && $route['method'] == strtoupper($method)) {
+                return require base_bath($route['controller']);
+            }
+        }
+        $this->abort();
+    }
+    public function abort($code=404){
+    http_response_code($code);
+    require base_bath("views/{$code}.php");
+    die();
+}
+
+
+}
+
+//function abort($code=404){
+//    http_response_code($code);
+//    require base_bath("views/{$code}.php");
+//    die();
+//}
+//function routeToController($uri,$routes){
+//    if (array_key_exists($uri,$routes)){
+//        require base_bath($routes[$uri]);
+//    }
+//    else {
+//        abort();
+//    }
+//}
+//
+
+
+```
+
+## some edit on public/index.php
+```php
+<?php
+// base_bath function on line 12 replaced with code below it after edit the router.php
+//to our class Router.php and take an instance of this class 
+const BASE_PATH = __DIR__ . '/../';
+require BASE_PATH . 'core/function.php';
+
+
+
+spl_autoload_register(function ($class) {
+    $class= str_replace('\\',DIRECTORY_SEPARATOR,$class);
+   require base_bath("{$class}.php");
+});
+//require base_bath('core/Router.php');
+
+$router=new core\Router();
+
+$routes = require base_bath('routes.php');
+$uri = parse_url($_SERVER['REQUEST_URI'])['path'];
+//routeToController($uri,$routes);
+
+
+$method = isset($_POST['_method']) ? $_POST['_method'] : $_SERVER['REQUEST_METHOD'];
+
+$router->route($uri,$method);
+//dd($router);
 
 ```

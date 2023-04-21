@@ -11,4 +11,4 @@
         </p>
     </div>
 </main>
-<?php require('views/partials/footer.php') ?>
+<?php require base_bath('views/partials/footer.php') ?>
