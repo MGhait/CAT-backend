@@ -1119,3 +1119,204 @@ $router->route($uri,$method);
 //dd($router);
 
 ```
+> create new classes App and Container and update db in controllers/notes/
+
+## App.php class
+```php
+<?php
+
+namespace core;
+
+class App
+{
+
+    protected static $container;
+    public static function setContainer($container)
+    {
+        static::$container = $container;
+    }
+
+    public static function container()
+    {
+        return  static::$container;
+    }
+
+    //to make direct access from app class to bind function in Container class
+    public static function bind($key, $resolver)
+    {
+        static::container()->bind($key, $resolver);
+    }
+
+    //to make direct access from app class to resolve function in Container class
+    public static function resolve($key)
+    {
+        return static::container()->resolve($key);
+    }
+}
+```
+
+## Container.php class
+```php
+<?php
+
+namespace core;
+
+use Exception;
+
+class Container
+{
+    protected $bindings = [];
+
+    public function bind($key, $resolver)
+    {
+
+        $this->bindings[$key] = $resolver;
+    }
+
+
+    /**
+     * @throws Exception
+     */
+    public function resolve($key)
+    {
+        if (! array_key_exists($key, $this->bindings))
+        {
+            throw new Exception("No matching bind found for $key");
+        }
+            $resolver = $this->bindings[$key];
+            return call_user_func($resolver);
+    }
+
+    //end of class
+}
+```
+
+## bootstrap.php file
+```php
+<?php
+use core\App;
+use core\Container;
+use core\Database;
+
+$container = new Container();
+
+$container->bind('core\Database',function (){
+    $config = require base_bath('config.php');
+
+    return new Database($config['database']);
+
+});
+
+//$db= $container->resolve('core\Database');
+//dd($db);
+
+App::setContainer($container);
+
+```
+## notes/destroy.php
+```php
+<?php
+use core\Database;
+use core\App;
+//$config = require base_bath('config.php');
+//$db = new Database($config['database']);
+
+//$db = App::container()->resolve('core\Database');
+//make it directly from app class
+$db = App::resolve(Database::class);
+
+//dd($db);
+$currentUserId = 1 ;
+
+$note = $db->query("SELECT * FROM notes WHERE id = :id", [
+    'id' => $_POST["id"]
+])->findOrFail();
+
+authorize($note['user_id'] == $currentUserId);
+
+$db->query('DELETE FROM notes WHERE id = :id',[
+'id'=>$_GET['id'],
+]);
+
+header('location: /notes');
+exit();
+
+
+```
+
+## notes/index.php
+```php
+<?php
+use core\Database;
+use core\App;
+//$config = require base_bath('config.php');
+//$db = new Database($config['database']);
+$db = App::resolve(Database::class);
+
+$notes = $db -> query("SELECT * FROM notes WHERE user_id = 1")->get();
+
+view("notes/index.view.php" ,[
+    'heading'=> 'My Notes',
+    'notes'=>$notes
+]);
+
+
+```
+
+## notes/show.php
+```php
+
+<?php
+use core\Database;
+use core\App;
+//$config = require base_bath('config.php');
+//$db = new Database($config['database']);
+$db = App::resolve(Database::class);
+
+$currentUserId = 1 ;
+$note = $db->query("SELECT * FROM notes WHERE id = :id", [
+    'id' => $_GET["id"]
+])->findOrFail();
+
+authorize($note['user_id'] == $currentUserId);
+
+view("notes/show.view.php", [
+    'heading' => 'Note',
+    'note' => $note
+]);
+
+```
+
+## notes/store.php
+```php
+<?php
+use core\Database;
+use core\Validator;
+use core\App;
+//$config = require base_bath('config.php');
+//$db = new Database($config['database']);
+$db = App::resolve(Database::class);
+
+$errors= [];
+
+if($_SERVER['REQUEST_METHOD']== 'POST')
+{
+    $invalidNum =250;
+    if(! Validator::string($_POST['body'],1,$invalidNum)){
+        $errors['body']="A Note Can NOT Be Empty Or More Than {$invalidNum} Characters. ";
+    }
+    if (! empty($errors)) {
+        // validation issues
+         return view("notes/create.view.php" ,[
+            'heading'=> 'Create Note',
+            'errors'=>$errors
+        ]);
+    }
+        $db->query('INSERT INTO notes(body, user_id) VALUE(:body, :user_id)',[
+            'body'=> $_POST['body'],
+            'user_id'=> 1
+        ]);
+        header('location: /notes');
+        die();
+}
+```

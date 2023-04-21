@@ -1,8 +1,7 @@
 <?php
 use core\Database;
-
-$config = require base_bath('config.php');
-$db = new Database($config['database']);
+use core\App;
+$db = App::resolve(Database::class);
 
 $currentUserId = 1 ;
 $note = $db->query("SELECT * FROM notes WHERE id = :id", [

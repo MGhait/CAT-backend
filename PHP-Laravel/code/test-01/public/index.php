@@ -10,6 +10,8 @@ spl_autoload_register(function ($class) {
    require base_bath("{$class}.php");
 });
 
+require base_bath('bootstrap.php');
+
 $router=new core\Router();
 
 $routes = require base_bath('routes.php');

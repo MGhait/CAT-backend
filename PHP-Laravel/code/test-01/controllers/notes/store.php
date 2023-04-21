@@ -1,12 +1,10 @@
 <?php
 use core\Database;
 use core\Validator;
+use core\App;
 
-$config = require base_bath('config.php');
-$db = new Database($config['database']);
-
+$db = App::resolve(Database::class);
 $errors= [];
-
 if($_SERVER['REQUEST_METHOD']== 'POST')
 {
     $invalidNum =250;
