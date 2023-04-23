@@ -37,3 +37,8 @@ function view($path, $attributes = [])
     extract($attributes);
     require base_bath('views/'.$path);
 }
+
+function redirect($path) {
+    header("location:{$path}");
+    exit();
+}
