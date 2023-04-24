@@ -41,6 +41,10 @@ class  Router {
         $this->routes[array_key_last($this->routes)]['middleware'] = $key;
         return $this;
     }
+
+    public function previousUrl() {
+        return $_SERVER['HTTP_REFERER'];
+    }
     public function route($uri,$method){
         foreach ($this->routes as $route) {
             if ($route['uri'] == $uri && $route['method'] == strtoupper($method)) {

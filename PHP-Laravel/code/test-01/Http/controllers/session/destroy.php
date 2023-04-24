@@ -1,6 +1,7 @@
 <?php
 
 // log the user out
-logout();
-header('location: /');
-exit();
+use core\Session;
+Session::destroy();
+//logout function didn't work for me
+redirect('/');

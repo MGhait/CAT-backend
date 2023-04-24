@@ -8,7 +8,7 @@ use core\Validator;
 
 $db = App::resolve(Database::class);
 
-$currentUserId = 1 ;
+$currentUserId = $_SESSION['id'] ;
 $note = $db->query("SELECT * FROM notes WHERE id = :id", [
     'id' => $_POST["id"]
 ])->findOrFail();
@@ -38,6 +38,4 @@ $db->query('update notes set body = :body where  id = :id',[
 ]);
 
 // redirect the user
-
-header('location: /notes');
-die();
+redirect('/notes');

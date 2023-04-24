@@ -2540,3 +2540,751 @@ $router->route($uri,$method);
 <?php require base_bath('views/partials/footer.php')?>
 ```
 
+## last Edition
+> core/Middleware/Authenticator
+ ```php
+<?php
+
+namespace core;
+
+class Authenticator
+{
+    public function attempt($email, $password)
+    {
+
+        $user = App::resolve(Database::class)
+            ->query('select * from users where email = :email',[
+            'email' => $email
+        ])->find();
+
+        if ($user) {
+            if (password_verify($password,$user['password'])) {
+                $this->login([
+                    'email' => $email
+                ]);
+
+                return true;
+            }
+        }
+        return false;
+
+
+    }
+
+    public function login($user) {
+        $_SESSION['user'] = [
+            'email' => $user['email']
+        ];
+        session_regenerate_id(true);
+    }
+
+    public function logout() {
+        Session::destroy();
+
+//        Session::flush();
+//        session_destroy();
+//        $parms = session_get_cookie_params();
+//        setcookie('PHPSESSID', '', time() - 3600, $parms['path'], $parms['domain'], $parms['secure'], $parms['httponly']);
+    }
+
+}
+```
+
+## core/Middleware/function
+> adding git_id function
+```php
+<?php
+
+use core\App;
+use core\Database;
+use core\Response;
+use core\Session;
+
+function dd($value)
+{
+echo '<pre>';
+    var_dump($value);
+    echo '</pre>';
+die();
+}
+
+function urlIs($value){
+return $_SERVER['REQUEST_URI'] == $value;
+}
+function authorize($condition, $status = Response::FORBIDDEN)
+{
+    if (! $condition) {
+        abort($status);
+    }
+}
+
+function abort($code = 404)
+{
+    http_response_code($code);
+    require base_bath("views/{$code}.php");
+    die();
+
+}
+
+function base_bath($path)
+{
+    return BASE_PATH . $path;
+}
+function view($path, $attributes = [])
+{
+    extract($attributes);
+    require base_bath('views/'.$path);
+}
+
+function redirect($path) {
+    header("location:{$path}");
+    exit();
+}
+
+function old($key, $default = '')
+{
+       return core\Session::get('old')[$key] ?? $default;
+//        core\Session::get('old')['email'] ?? '';
+}
+function git_id($email)
+{
+    $db = App::resolve(Database::class);
+    $var= $db->query('select * from users where email = :email',[
+        'email' => $email
+    ])->find();
+//dd($var);
+    return $var['id'];
+}
+
+// function login($user) {
+//    $_SESSION['user'] = [
+//        'email' => $user['email']
+//    ];
+//    session_regenerate_id(true);
+//}
+//
+// function logout() {
+//    Session::destroy();
+////        Session::flush();
+////
+////        session_destroy();
+////
+////        $parms = session_get_cookie_params();
+////        setcookie('PHPSESSID', '', time() - 3600, $parms['path'], $parms['domain'], $parms['secure'], $parms['httponly']);
+//}
+```
+## core/Middleware/Router.php
+```php
+<?php
+
+namespace core;
+
+use core\Middleware\Middleware;
+
+class  Router {
+    protected $routes = [];
+
+    public function add($method, $uri,$controller) {
+        $this->routes[]= [
+            'uri'=> $uri,
+            'controller' =>$controller,
+            'method' => $method,
+            'middleware' => null
+        ];
+        return $this;
+    }
+
+    public function get($uri,$controller){
+        return $this->add('GET', $uri, $controller);
+    }
+
+    public function post($uri,$controller){
+        return $this->add('POST', $uri, $controller);
+    }
+
+    public function delete($uri,$controller){
+       return  $this->add('DELETE', $uri, $controller);
+    }
+
+    public function patch($uri,$controller){
+       return  $this->add('BATCH', $uri, $controller);
+    }
+
+    public function put($uri,$controller){
+       return  $this->add('PUT', $uri, $controller);
+    }
+
+    public function only($key) {
+        $this->routes[array_key_last($this->routes)]['middleware'] = $key;
+        return $this;
+    }
+
+    public function previousUrl() {
+        return $_SERVER['HTTP_REFERER'];
+    }
+    public function route($uri,$method){
+        foreach ($this->routes as $route) {
+            if ($route['uri'] == $uri && $route['method'] == strtoupper($method)) {
+
+                Middleware::resolve($route['middleware']);
+                return require base_bath('Http/controllers/' . $route['controller']);
+            }
+        }
+        $this->abort();
+    }
+    public function abort($code=404){
+    http_response_code($code);
+    require base_bath("views/{$code}.php");
+    die();
+}
+
+
+}
+
+```
+
+## core/Middleware/Session.php
+```php
+<?php
+
+namespace core;
+
+class Session
+{
+    public static function has($key)
+    {
+        return (bool) static::get($key);
+    }
+    public static function put($key, $value)
+    {
+         $_SESSION[$key] = $value;
+    }
+
+    public static function get($key, $default = null)
+    {
+//        if (isset($_SESSION['_flash'][$key])) {
+//            return $_SESSION['_flash'][$key];
+//        }
+        return $_SESSION['_flash'][$key] ?? $_SESSION[$key] ??  $default;
+    }
+
+    public static function flash($key, $value)
+    {
+        $_SESSION['_flash'][$key]= $value;
+    }
+
+    public static function unflash()
+    {
+        unset($_SESSION['_flash']);
+    }
+
+    public static function flush() {
+        $_SESSION = [];
+    }
+
+    public static function destroy()
+    {
+        static::flush();
+        session_destroy();
+        $parms = session_get_cookie_params();
+        setcookie('PHPSESSID', '', time() - 3600, $parms['path'], $parms['domain'], $parms['secure'], $parms['httponly']);
+    }
+
+}
+```
+
+## core/Middleware/ValidationException.php
+```php
+<?php
+
+namespace core;
+
+class ValidationException extends \Exception
+{
+    public readonly array $errors ;
+    public readonly array $old ;
+
+    public static function throw($errors, $old)
+    {
+        $instance = new static;
+
+        $instance->errors = $errors;
+        $instance->old = $old;
+
+        throw $instance;
+
+    }
+
+}
+```
+> update currentUserId we hard coded to `$_SESSION['id']` in Http/controllers/notes  
+> and use redirect() method
+## Http/controllers/notes/destroy.php
+```php
+<?php
+use core\Database;
+use core\App;
+$db = App::resolve(Database::class);
+
+$currentUserId = $_SESSION['id'] ;
+
+$note = $db->query("SELECT * FROM notes WHERE id = :id", [
+    'id' => $_POST["id"]
+])->findOrFail();
+
+authorize($note['user_id'] == $currentUserId);
+
+$db->query('DELETE FROM notes WHERE id = :id',[
+'id'=>$_POST['id'],
+]);
+
+redirect('/notes');
+//header('location: /notes');
+//exit();
+
+
+```
+
+## Http/controllers/notes/edit.php
+```php
+<?php
+use core\Database;
+use core\App;
+$db = App::resolve(Database::class);
+
+$currentUserId = $_SESSION['id'] ;
+$note = $db->query("SELECT * FROM notes WHERE id = :id", [
+    'id' => $_GET["id"]
+])->findOrFail();
+
+authorize($note['user_id'] == $currentUserId);
+view("notes/edit.view.php" ,[
+    'heading'=> 'Create Note',
+    'errors'=> [],
+    'note'=>$note
+]);
+```
+
+## Http/controllers/notes/index.php
+```php
+<?php
+use core\Database;
+use core\App;
+$db = App::resolve(Database::class);
+
+$notes = $db -> query("SELECT * FROM notes WHERE user_id = :id",[
+    'id' => $_SESSION['id']
+])->get();
+
+view("notes/index.view.php" ,[
+    'heading'=> 'My Notes',
+    'notes'=>$notes
+]);
+
+
+```
+
+## Http/controllers/notes/show.php
+```php
+<?php
+use core\Database;
+use core\App;
+$db = App::resolve(Database::class);
+
+$currentUserId = $_SESSION['id'] ;
+$note = $db->query("SELECT * FROM notes WHERE id = :id", [
+    'id' => $_GET["id"]
+])->findOrFail();
+
+authorize($note['user_id'] == $currentUserId);
+
+view("notes/show.view.php", [
+    'heading' => 'Note',
+    'note' => $note
+]);
+
+```
+
+## Http/controllers/notes/store.php
+```php
+<?php
+use core\Database;
+use core\Validator;
+use core\App;
+
+$db = App::resolve(Database::class);
+$errors= [];
+if($_SERVER['REQUEST_METHOD']== 'POST')
+{
+    $invalidNum =250;
+    if(! Validator::string($_POST['body'],1,$invalidNum)){
+        $errors['body']="A Note Can NOT Be Empty Or More Than {$invalidNum} Characters. ";
+    }
+    if (! empty($errors)) {
+        // validation issues
+         return view("notes/create.view.php" ,[
+            'heading'=> 'Create Note',
+            'errors'=>$errors
+        ]);
+    }
+
+        $db->query('INSERT INTO notes(body, user_id) VALUE(:body, :user_id)',[
+            'body'=> $_POST['body'],
+            'user_id'=> $_SESSION['id']
+        ]);
+        header('location: /notes');
+        die();
+}
+```
+
+## Http/controllers/notes/update.php
+```php
+<?php
+
+// find the corresponding note
+
+use core\Database;
+use core\App;
+use core\Validator;
+
+$db = App::resolve(Database::class);
+
+$currentUserId = $_SESSION['id'] ;
+$note = $db->query("SELECT * FROM notes WHERE id = :id", [
+    'id' => $_POST["id"]
+])->findOrFail();
+
+// authorize that the current user can dit the note
+authorize($note['user_id'] == $currentUserId);
+
+// validate the form
+$errors= [];
+$invalidNum =250;
+if(! Validator::string($_POST['body'],1,$invalidNum)){
+    $errors['body']="A Note Can NOT Be Empty Or More Than {$invalidNum} Characters. ";
+}
+
+// if no validation errors, update the record in the notes database table.
+if (count($errors)) {
+    return view('notes/edit.view.php',[
+       'heading'=> 'Edit Note',
+       'errors' => $errors,
+       'note' => $note
+    ]);
+}
+
+$db->query('update notes set body = :body where  id = :id',[
+    'id' => $_POST['id'],
+    'body' => $_POST['body']
+]);
+
+// redirect the user
+redirect('/notes');
+//header('location: /notes');
+//die();
+```
+
+## Http/controllers/registration/store.php
+```php
+<?php
+
+use core\App;
+use core\Database;
+use core\Validator;
+use core\Authenticator;
+//dd($_POST);
+
+$email = $_POST['email'];
+$password = $_POST['password'];
+// validate the form inputs
+$errors = [];
+if (! Validator::email($email)) {
+    $errors['email'] = 'Please provide valid email address';
+}
+if (! Validator::string($password , 7, 255)) {
+    $errors['password'] = 'Please provide a password at least 7 characters';
+}
+//dd($errors);
+if (! empty($errors)) {
+     return view('registration/create.view.php',[
+        'errors' => $errors
+     ]);
+//    dd('errors');
+}
+
+// check if the account already exists
+$db = App::resolve(Database::class);
+$user = $db->query('SELECT * FROM users WHERE email = :email',[
+    'email' => $email
+])->find();
+//dd($user);
+if ($user) {
+dd('hi');
+    // if yes, redirect to a login page.
+    header('location: /');
+    exit();
+//    dd($_SESSION);
+} else {
+    // if not, save one to the database
+    $db->query('INSERT INTO users(email,password) VALUE (:email, :password)',[
+        'email' => $email,
+        'password' => password_hash($password,PASSWORD_BCRYPT)
+    ]);
+    //mark that the user has logged in
+    (Authenticator::class)->login([
+       'email' => $email
+   ]);
+//    dd($_SESSION);
+
+    redirect('/');
+//    header('location: /');
+//    exit();
+}
+
+
+```
+
+## Http/controllers/session/create.php
+```php
+<?php
+view('session/create.view.php',[
+    'errors' => $_SESSION['_flash']['errors'] ?? []
+]);
+```
+
+
+## Http/controllers/session/destroy.php
+```php
+<?php
+
+// log the user out
+use core\Session;
+
+Session::destroy();
+//logout function didn't work for me
+
+
+redirect('/');
+//header('location: /');
+//exit();
+
+```
+
+
+## Http/controllers/session/store.php
+```php
+<?php
+
+use core\Authenticator;
+use Http\Forms\LoginForm;
+
+// login the user if the credentials match.
+//$email = $_POST['email'];
+//$password = $_POST['password'];
+
+//$form = new LoginForm();
+$_SESSION['id']=git_id($_POST['email']);
+//dd($_SESSION);
+//git_id($_POST['email']);
+$form = LoginForm::validate($attributes = [
+    'email' => $_POST['email'],
+    'password' => $_POST['password']
+]);
+
+
+$signin = (new Authenticator)->attempt(
+    $attributes['email'], $attributes['password']
+);
+if (! $signin)
+{
+    $form->error(
+        'email','No matching account found for that email address and password'
+    )->throw();
+}
+
+    redirect('/');
+//return redirect('/login');
+
+//$_SESSION['_flash']['errors'] = $form->errors();
+
+//return view('session/create.view.php',[
+//    'errors' => $form->errors()
+//]);
+
+```
+
+## Http/Forms/LoginForm.php
+```php
+<?php
+
+namespace Http\Forms;
+
+use core\ValidationException;
+use core\Validator;
+
+class LoginForm
+{
+
+    protected $errors = [];
+    public function __construct(public array $attributes)
+    {
+        if (! Validator::email($attributes['email'])) {
+            $this->errors['email'] = 'Please provide valid email address';
+        }
+        if (! Validator::string($attributes['password'])) {
+            $this->errors['password'] = 'Please provide a valid password.';
+        }
+
+        return empty($this->errors);
+    }
+
+    public static function validate($attributes)
+    {
+        $instance = new static($attributes);
+
+        return $instance->failed() ? $instance->throw() : $instance;
+//        if ($instance->failed()) {
+////            throw new ValidationException();
+////            ValidationException::throw($instance->errors(), $instance->attributes);
+//            $instance->throw();
+//        }
+
+        return $instance;
+    }
+
+    public function throw()
+    {
+        ValidationException::throw($this->errors(),$this->attributes);
+    }
+
+    public function failed()
+    {
+        return count($this->errors);
+    }
+
+    public function errors() {
+        return $this->errors;
+    }
+    public function error($field, $message) {
+        $this->errors[$field] = $message;
+        return $this;
+    }
+
+}
+```
+## public/index.php
+```php
+<?php
+
+use core\Session;
+use core\ValidationException;
+
+session_start();
+const BASE_PATH = __DIR__ . '/../';
+require BASE_PATH . 'core/function.php';
+
+
+
+
+spl_autoload_register(function ($class) {
+    $class= str_replace('\\',DIRECTORY_SEPARATOR,$class);
+   require base_bath("{$class}.php");
+});
+
+require base_bath('bootstrap.php');
+
+$router=new core\Router();
+
+$routes = require base_bath('routes.php');
+$uri = parse_url($_SERVER['REQUEST_URI'])['path'];
+
+$method = $_POST['_method'] ?? $_SERVER['REQUEST_METHOD'];
+
+try {
+$router->route($uri,$method);
+
+} catch (ValidationException $exception) {
+
+    Session::flash('errors',$exception->errors);
+    Session::flash('old',$exception->old);
+//    return redirect('/login');
+//    redirect with the current page
+    return redirect($router->previousUrl());
+}
+
+//unset($_SESSION['_flash']);
+Session::unflash();
+```
+
+## views/session/create.view.php
+```php
+
+<?php require base_bath('views/partials/head.php')?>
+<?php require base_bath('views/partials/nav.php');?>
+<?php //require base_bath('views/partials/banner.php')?>
+<main>
+    <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
+        <div class="sm:mx-auto sm:w-full sm:max-w-sm">
+            <img class="mx-auto h-10 w-auto" src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=600" alt="Your Company">
+            <h2 class="mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">Login in !</h2>
+        </div>
+
+        <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
+            <form class="space-y-6" action="/session" method="POST">
+                <div>
+                    <!--                        <label for="email" class="block text-sm font-medium leading-6 text-gray-900">Email address</label>-->
+                    <div class="mt-2">
+                        <input
+                            id="email"
+                            name="email"
+                            type="email"
+                            autocomplete="email"
+                            required
+                            placeholder="Email Address"
+                            class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                            value="<?= old('email','') ?>"
+                        >
+                        <?php if(isset($errors['email'])) : ?>
+                            <p class="text-red-500 text-xs mt-2">
+                                <?= $errors['email']?>
+                            </p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div>
+                    <!--                        <div class="flex items-center justify-between">-->
+                    <!--                            <label for="password" class="block text-sm font-medium leading-6 text-gray-900">Password</label> -->
+                    <!--                        </div>-->
+                    <div class="mt-2">
+                        <input
+                            id="password"
+                            name="password"
+                            type="password"
+                            autocomplete="current-password"
+                            required
+                            placeholder="Password"
+                            class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                        >
+                        <?php if(isset($errors['password'])) : ?>
+                            <p class="text-red-500 text-xs mt-2">
+                                <?= $errors['password']?>
+                            </p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <div>
+                    <button type="submit" class="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Login</button>
+                </div>
+            </form>
+
+
+        </div>
+    </div>
+</main>
+
+<?php require base_bath('views/partials/footer.php') ?>
+```
+
+
+

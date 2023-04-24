@@ -1,6 +1,9 @@
 <?php
 
+use core\App;
+use core\Database;
 use core\Response;
+use core\Session;
 
 function dd($value)
 {
@@ -41,4 +44,18 @@ function view($path, $attributes = [])
 function redirect($path) {
     header("location:{$path}");
     exit();
+}
+
+function old($key, $default = '')
+{
+       return core\Session::get('old')[$key] ?? $default;
+}
+function git_id($email)
+{
+    $db = App::resolve(Database::class);
+    $var= $db->query('select * from users where email = :email',[
+        'email' => $email
+    ])->find();
+//dd($var);
+    return $var['id'];
 }

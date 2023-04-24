@@ -4,20 +4,21 @@ use core\Authenticator;
 use Http\Forms\LoginForm;
 
 // login the user if the credentials match.
-$email = $_POST['email'];
-$password = $_POST['password'];
+$_SESSION['id']=git_id($_POST['email']);
 
-$form = new LoginForm();
-if ($form->validate($email,$password)) {
-    if ((new Authenticator)->attempt($email,$password))
-    {
-        redirect('/');
-    //    header('location: /');
-    //    exit();
-    }
-$form->error('email','No matching account found for that email address and password');
-}
-
-return view('session/create.view.php',[
-    'errors' => $form->errors()
+$form = LoginForm::validate($attributes = [
+    'email' => $_POST['email'],
+    'password' => $_POST['password']
 ]);
+
+
+$signin = (new Authenticator)->attempt(
+    $attributes['email'], $attributes['password']
+);
+if (! $signin)
+{
+    $form->error(
+        'email','No matching account found for that email address and password'
+    )->throw();
+}
+    redirect('/');
