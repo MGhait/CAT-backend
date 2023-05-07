@@ -2858,3 +2858,247 @@ return redirect('/login');
 
 <?php require base_bath('views/partials/footer.php') ?>
 ```
+## some edit on ep 46
+- update Forms/LoginForm.php class
+- update core/Router.php class
+- create core/ValidationException.php class
+- update Http/controllers/session/store.php
+- update public/index.php
+
+## Forms/LoginForm.php 
+```php
+<?php
+
+namespace Http\Forms;
+
+use core\ValidationException;
+use core\Validator;
+
+class LoginForm
+{
+    protected $errors = [];
+
+    public function __construct(public array $attributes)
+    {
+        if (! Validator::email($attributes['email'])) {
+            $this->errors['email'] = 'Please provide valid email address';
+        }
+        if (! Validator::string($attributes['password'])) {
+            $this->errors['password'] = 'Please provide a valid password.';
+        }
+
+    }
+
+    public static function validate($attributes)
+    {
+        $instance = new static($attributes);
+
+        return $instance->faild() ? $instance->throw() : $instance;
+//        if ($instance->faild()) {
+////            throw new ValidationException();
+//            $instance->throw();
+//        }
+//
+//        return $instance;
+
+    }
+
+    public function throw ()
+    {
+        ValidationException::throw($this->errors(), $this->attributes);
+
+    }
+
+    public function  faild() {
+        return count($this->errors);
+    }
+    public function errors() {
+        return $this->errors;
+    }
+    public function error($field, $message) {
+        $this->errors[$field] = $message;
+        return $this;
+    }
+
+}
+```
+## core/Router.php
+ * add the previousUrl function
+```php
+<?php
+
+namespace core;
+
+use core\Middleware\Middleware;
+
+class  Router {
+    protected $routes = [];
+
+    public function add($method, $uri,$controller) {
+        $this->routes[]= [
+            'uri'=> $uri,
+            'controller' =>$controller,
+            'method' => $method,
+            'middleware' => null
+        ];
+        return $this;
+    }
+
+    public function get($uri,$controller){
+        return $this->add('GET', $uri, $controller);
+    }
+
+    public function post($uri,$controller){
+        return $this->add('POST', $uri, $controller);
+    }
+
+    public function delete($uri,$controller){
+       return  $this->add('DELETE', $uri, $controller);
+    }
+
+    public function patch($uri,$controller){
+       return  $this->add('BATCH', $uri, $controller);
+    }
+
+    public function put($uri,$controller){
+       return  $this->add('PUT', $uri, $controller);
+    }
+
+    public function only($key) {
+        $this->routes[array_key_last($this->routes)]['middleware'] = $key;
+        return $this;
+    }
+    public function route($uri,$method){
+        foreach ($this->routes as $route) {
+            if ($route['uri'] == $uri && $route['method'] == strtoupper($method)) {
+
+                Middleware::resolve($route['middleware']);
+                return require base_bath('Http/controllers/' . $route['controller']);
+            }
+        }
+        $this->abort();
+    }
+
+    public function previousUrl() {
+        return $_SERVER['HTTP_REFERER'];
+    }
+
+    public function abort($code=404){
+    http_response_code($code);
+    require base_bath("views/{$code}.php");
+    die();
+    }
+
+
+
+}
+
+```
+
+## ValidationException.php
+```php
+<?php
+
+namespace core;
+
+class ValidationException extends \Exception
+{
+    public readonly array $errors;
+    public readonly array $old ;
+    public static function throw($errors, $old) {
+        $instance =  new static;
+
+        $instance->errors = $errors;
+        $instance->old = $old;
+
+        throw $instance;
+    }
+}
+```
+## Http/session/store.php
+```php
+<?php
+
+use core\Authenticator;
+//use core\Session;
+//use core\ValidationException;
+use Http\Forms\LoginForm;
+
+// login the user if the credentials match.
+//$email = $_POST['email'];
+//$password = $_POST['password'];
+
+
+$form = LoginForm::validate($attributes = [
+    'email' => $_POST['email'],
+    'password' => $_POST['password']
+]);
+
+
+$signedIn = (new Authenticator)->attempt(
+    $attributes['email'], $attributes['password']
+);
+
+if ($signedIn) {
+    $form->error(
+        'email','No matching account found for that email address and password'
+    )->throw();
+}
+
+    redirect('/');
+
+
+//$_SESSION['errors'] = $form->errors(); we need it to be flashed
+//$_SESSION['_flash']['errors'] = $form->errors(); //  we did session class to help it
+//Session::flash('errors',$form->errors());
+//Session::flash('old', [
+//    'email' => $_POST['email']
+//]);
+
+//return redirect('/login');
+//return view('session/create.view.php',[
+//    'errors' => $form->errors()
+//]);
+
+```
+
+## public/index.php
+```php
+<?php
+
+use core\Session;
+use core\ValidationException;
+
+session_start();
+const BASE_PATH = __DIR__ . '/../';
+require BASE_PATH . 'core/function.php';
+
+
+
+spl_autoload_register(function ($class) {
+    $class= str_replace('\\',DIRECTORY_SEPARATOR,$class);
+   require base_bath("{$class}.php");
+});
+
+require base_bath('bootstrap.php');
+
+$router=new core\Router();
+
+$routes = require base_bath('routes.php');
+$uri = parse_url($_SERVER['REQUEST_URI'])['path'];
+
+$method = $_POST['_method'] ?? $_SERVER['REQUEST_METHOD'];
+
+try {
+    $router->route($uri,$method);
+} catch (ValidationException $exception) {
+    Session::flash('errors',$exception->errors);
+    Session::flash('old',$exception->old);
+
+    return redirect($router->previousUrl());
+}
+
+//unset($_SESSION['flash']); we use class Session on it
+Session::unflash();
+
+```
