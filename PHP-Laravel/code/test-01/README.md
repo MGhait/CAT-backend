@@ -2540,3 +2540,321 @@ $router->route($uri,$method);
 <?php require base_bath('views/partials/footer.php')?>
 ```
 
+## some updates till ep 45
+- update public/index.php
+- update views/session/create.view.php
+- update Http/controllers/session/create.php
+- update Http/controllers/session/store
+- create core/Session.php class
+- update core/Authenticator.php class
+- "Adding some updates to function.php"
+
+## public/index.php
+```php
+
+<?php
+
+use core\Session;
+
+session_start();
+const BASE_PATH = __DIR__ . '/../';
+require BASE_PATH . 'core/function.php';
+
+
+
+spl_autoload_register(function ($class) {
+    $class= str_replace('\\',DIRECTORY_SEPARATOR,$class);
+   require base_bath("{$class}.php");
+});
+
+require base_bath('bootstrap.php');
+
+$router=new core\Router();
+
+$routes = require base_bath('routes.php');
+$uri = parse_url($_SERVER['REQUEST_URI'])['path'];
+
+$method = $_POST['_method'] ?? $_SERVER['REQUEST_METHOD'];
+
+$router->route($uri,$method);
+
+//unset($_SESSION['flash']); we use class Session on it
+Session::unflash();
+```
+## core/Authenticator.php
+```php
+<?php
+
+namespace core;
+
+class Authenticator
+{
+    public function attempt($email, $password)
+    {
+
+        $user = App::resolve(Database::class)
+            ->query('select * from users where email = :email',[
+            'email' => $email
+        ])->find();
+
+        if ($user) {
+            if (password_verify($password,$user['password'])) {
+                $this->login([
+                    'email' => $email
+                ]);
+
+                return true;
+            }
+        }
+        return false;
+
+
+    }
+
+    public function login($user) {
+        $_SESSION['user'] = [
+            'email' => $user['email']
+        ];
+
+        session_regenerate_id(true);
+    }
+
+    public function logout() {
+        Session::destroy();
+    }
+
+}
+```
+
+## core/function.php
+- IT NEEDS MORE EDIT
+- LOGIN & LOGOUT DIDN'T WORK SO I KEPT THEM HERE
+```php
+<?php
+
+use core\Response;
+
+function dd($value)
+{
+echo '<pre>';
+    var_dump($value);
+    echo '</pre>';
+die();
+}
+
+function urlIs($value){
+return $_SERVER['REQUEST_URI'] == $value;
+}
+function authorize($condition, $status = Response::FORBIDDEN)
+{
+    if (! $condition) {
+        abort($status);
+    }
+}
+
+function abort($code = 404)
+{
+    http_response_code($code);
+    require base_bath("views/{$code}.php");
+    die();
+
+}
+
+function base_bath($path)
+{
+    return BASE_PATH . $path;
+}
+function view($path, $attributes = [])
+{
+    extract($attributes);
+    require base_bath('views/'.$path);
+}
+
+function redirect($path) {
+    header("location:{$path}");
+    exit();
+}
+
+function login($user) {
+    $_SESSION['user'] = [
+        'email' => $user['email']
+    ];
+
+    session_regenerate_id(true);
+}
+function logout() {
+    $_SESSION = [];
+    session_destroy();
+
+    $parms = session_get_cookie_params();
+    setcookie('PHPSESSID', '', time() - 3600, $parms['path'], $parms['domain'], $parms['secure'], $parms['httponly']);
+}
+
+function old($key, $default = '') {
+    return core\Session::get('old')[$key] ?? $default ;
+}
+```
+
+## core/Session.php
+```php
+<?php
+
+namespace core;
+
+class Session
+{
+    public static function has($key) {
+        return (bool) static::get($key);
+    }
+
+    public static function put($key, $value){
+        $_SESSION['key'] = $value;
+    }
+
+    public  static function get($key, $default = null) {
+//        if (isset($_SESSION['_flash'][$key])) {
+//            return $_SESSION['_flash'][$key];
+//        }
+//        return $_SESSION['key'] ?? $default; we can make it with shorthand
+        return $_SESSION['_flash'][$key] ?? $_SESSION[$key] ?? $default;
+    }
+
+    public static function flash($key, $value) {
+        $_SESSION['_flash'][$key] = $value;
+    }
+
+    public static function unflash() {
+        unset($_SESSION['_flash']);
+
+    }
+
+    public static function flush() {
+        $_SESSION = [];
+    }
+
+    public static function destroy() {
+        //        $_SESSION = []; we can use here flush method form session
+        static::flush();
+        session_destroy();
+
+        $parms = session_get_cookie_params();
+        setcookie('PHPSESSID', '', time() - 3600, $parms['path'], $parms['domain'], $parms['secure'], $parms['httponly']);
+    }
+
+}
+```
+
+## Http/controllers/session/create.php
+```php
+<?php
+view('session/create.view.php',[
+    'errors' => $_SESSION['_flash']['errors'] ?? []
+]);
+```
+## Http/controllers/session/store.php
+```php
+<?php
+
+use core\Authenticator;
+use core\Session;
+use Http\Forms\LoginForm;
+
+// login the user if the credentials match.
+$email = $_POST['email'];
+$password = $_POST['password'];
+
+$form = new LoginForm();
+if ($form->validate($email,$password)) {
+    if ((new Authenticator)->attempt($email,$password))
+    {
+        redirect('/');
+    //    header('location: /');
+    //    exit();
+    }
+$form->error('email','No matching account found for that email address and password');
+}
+
+
+//$_SESSION['errors'] = $form->errors(); we need it to be flashed
+//$_SESSION['_flash']['errors'] = $form->errors(); //  we did session class to help it
+Session::flash('errors',$form->errors());
+Session::flash('old', [
+    'email' => $_POST['email']
+]);
+
+return redirect('/login');
+//return view('session/create.view.php',[
+//    'errors' => $form->errors()
+//]);
+
+```
+
+## views/session/create.view.php
+```php
+
+<?php require base_bath('views/partials/head.php')?>
+<?php require base_bath('views/partials/nav.php');?>
+<?php //require base_bath('views/partials/banner.php')?>
+<main>
+    <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
+        <div class="sm:mx-auto sm:w-full sm:max-w-sm">
+            <img class="mx-auto h-10 w-auto" src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=600" alt="Your Company">
+            <h2 class="mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">Login in !</h2>
+        </div>
+
+        <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
+            <form class="space-y-6" action="/session" method="POST">
+                <div>
+                    <!--                        <label for="email" class="block text-sm font-medium leading-6 text-gray-900">Email address</label>-->
+                    <div class="mt-2">
+                        <input
+                            id="email"
+                            name="email"
+                            type="email"
+                            autocomplete="email"
+                            required
+                            placeholder="Email Address"
+                            class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                            value=" <?= old('email') ?>"
+                        >
+                        <?php if(isset($errors['email'])) : ?>
+                            <p class="text-red-500 text-xs mt-2">
+                                <?= $errors['email']?>
+                            </p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div>
+                    <!--                        <div class="flex items-center justify-between">-->
+                    <!--                            <label for="password" class="block text-sm font-medium leading-6 text-gray-900">Password</label> -->
+                    <!--                        </div>-->
+                    <div class="mt-2">
+                        <input
+                            id="password"
+                            name="password"
+                            type="password"
+                            autocomplete="current-password"
+                            required
+                            placeholder="Password"
+                            class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                        >
+                        <?php if(isset($errors['password'])) : ?>
+                            <p class="text-red-500 text-xs mt-2">
+                                <?= $errors['password']?>
+                            </p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <div>
+                    <button type="submit" class="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Login</button>
+                </div>
+            </form>
+
+
+        </div>
+    </div>
+</main>
+
+<?php require base_bath('views/partials/footer.php') ?>
+```
