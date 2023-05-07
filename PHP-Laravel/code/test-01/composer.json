@@ -1,0 +1,26 @@
+{
+    "name": "mosaa/test-01",
+    "authors": [
+        {
+            "name": "Mohamed Ghait",
+            "email": "mosaad05019@gmail.com"
+        }
+    ],
+    "require": {
+        "illuminate/collections": "^10.9"
+    },
+    "autoload": {
+        "psr-4": {
+            "core\\": "core/",
+            "Http\\": "core/"
+        }
+    },
+    "require-dev": {
+        "pestphp/pest": "^2.6"
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
+}
